@@ -44,14 +44,35 @@ def parse_cairo_contract(contract_path):
         # compile important keywords
         dict_of_keywords = dict(
             {
-                "lang": re.compile(r"%lang"),
-                "builtin": re.compile(r"%builtins"),
-                "inherits": re.compile("@inherits"),
-                "storage": re.compile("@storage_var"),
-                "constructor": re.compile("@constructor"),
-                "const": re.compile("\nconst "),
-                "func": re.compile("\nfunc "),
-                "end": re.compile("end"),
+                "lang": {
+                    "compiled": re.compile(r"%lang"),
+                    "parse_function": "parse_lang",
+                },
+                "builtin": {
+                    "compiled": re.compile(r"%builtins"),
+                    "parse_function": "parse_builtin",
+                },
+                "inherits": {
+                    "compiled": re.compile("@inherits"),
+                    "parse_function": "parse_inherit",
+                },
+                "storage": {
+                    "compiled": re.compile("@storage_var"),
+                    "parse_function": "parse_storage",
+                },
+                "constructor": {
+                    "compiled": re.compile("@constructor"),
+                    "parse_function": "parse_constructor",
+                },
+                "const": {
+                    "compiled": re.compile("\nconst "),
+                    "parse_function": "parse_const",
+                },
+                "func": {
+                    "compiled": re.compile("\nfunc "),
+                    "parse_function": "parse_func",
+                },
+                "end": {"compiled": re.compile("end"), "parse_function": "parse_end"},
             }
         )
 
@@ -60,16 +81,18 @@ def parse_cairo_contract(contract_path):
         for keyword in dict_of_keywords.keys():
             dict_of_matches[keyword] = [
                 {"start": x.start(), "finish": x.end()}
-                for x in dict_of_keywords[keyword].finditer(contract_as_string)
+                for x in dict_of_keywords[keyword]["compiled"].finditer(
+                    contract_as_string
+                )
             ]
 
-        print(dict_of_matches)
+        for keyword in dict_of_matches.keys():
+            dict_of_contract[keyword] = eval(
+                f'{dict_of_keywords[keyword]["parse_function"]}'
+                + '(contract_as_string, dict_of_matches["lang"])'
+            )
 
-        dict_of_contract["lang"] = parse_lang(
-            contract_as_string, dict_of_matches["lang"]
-        )
-
-        print(dict_of_contract)
+            print(dict_of_contract)
 
 
 def parse_lang(contract: str, lang_match: re.Match):

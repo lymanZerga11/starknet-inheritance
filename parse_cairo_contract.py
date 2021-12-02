@@ -38,19 +38,16 @@ def parse_cairo_contract(contract_path):
         contract_as_string = contract.read()
         print(contract_as_string)
 
-        # final data structure
-        dict_of_contract = dict()
-
         # compile important keywords
         dict_of_keywords = dict(
             {
                 "lang": {
                     "compiled": re.compile(r"%lang"),
-                    "parse_function": "parse_lang",
+                    "parse_function": "parse_percent_header",
                 },
                 "builtin": {
                     "compiled": re.compile(r"%builtins"),
-                    "parse_function": "parse_builtin",
+                    "parse_function": "parse_percent_header",
                 },
                 "inherits": {
                     "compiled": re.compile("@inherits"),
@@ -76,44 +73,57 @@ def parse_cairo_contract(contract_path):
             }
         )
 
-        dict_of_matches = dict()
+        dict_of_matches = create_dict_of_matches(contract_as_string, dict_of_keywords)
 
-        for keyword in dict_of_keywords.keys():
-            dict_of_matches[keyword] = [
-                {"start": x.start(), "finish": x.end()}
-                for x in dict_of_keywords[keyword]["compiled"].finditer(
-                    contract_as_string
-                )
-            ]
-
-        for keyword in dict_of_matches.keys():
-            dict_of_contract[keyword] = eval(
-                f'{dict_of_keywords[keyword]["parse_function"]}'
-                + '(contract_as_string, dict_of_matches["lang"])'
-            )
-
-            print(dict_of_contract)
+        dict_of_contract = create_dict_of_contract(
+            contract_as_string, dict_of_keywords, dict_of_matches
+        )
 
 
-def parse_lang(contract: str, lang_match: re.Match):
-    lang_list = list()
+def create_dict_of_matches(contract: str, dict_of_keywords: dict()) -> dict():
+    dict_of_matches = dict()
 
+    for keyword in dict_of_keywords.keys():
+        dict_of_matches[keyword] = [
+            {"start": x.start(), "finish": x.end()}
+            for x in dict_of_keywords[keyword]["compiled"].finditer(contract)
+        ]
+
+    return dict_of_matches
+
+
+def create_dict_of_contract(
+    contract: str, dict_of_keywords: dict(), dict_of_matches: dict()
+) -> dict():
+    # final data structure
+    dict_of_contract = dict()
+
+    for keyword in dict_of_matches.keys():
+        dict_of_contract[keyword] = eval(
+            f'{dict_of_keywords[keyword]["parse_function"]}'
+            + "(contract, dict_of_matches[keyword])"
+        )
+
+        print(dict_of_contract)
+
+    return dict_of_contract
+
+
+def parse_percent_header(contract: str, percent_match: re.Match) -> list():
+    percent_list = list()
     newline = re.compile("\n")
+    word = re.compile("[\S]+")
 
-    for occurance in lang_match:
-        string_starting_with_lang = contract[occurance["start"] :]
-        match = newline.search(string_starting_with_lang)
+    for occurance in percent_match:
+        string_starting_with_percent = contract[occurance["start"] :]
+        match = newline.search(string_starting_with_percent)
 
-        lang_block = string_starting_with_lang[: match.start()]
+        percent_block = string_starting_with_percent[: match.start()]
 
-        lang_types = list(["starknet"])
-        compiled_langs = compile_list_of_strings(lang_types)
+        list_of_words = word.findall(percent_block)
+        percent_list.extend(list_of_words[1:])
 
-        for lang in compiled_langs:
-            if lang.search(lang_block):
-                lang_list.append(lang.pattern)
-
-    return lang_list
+    return percent_list
 
 
 def compile_list_of_strings(list_of_strings: list()) -> list():

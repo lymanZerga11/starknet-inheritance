@@ -13,6 +13,7 @@ Parse a .cairo contract into the following data structure:
         inputs: List[str]
         outputs: List[str]
         raw_text: str
+        file_of_origin: str <- name of file of origin
     }
     constructor: Dict{
         inputs: List[str]
@@ -23,6 +24,7 @@ Parse a .cairo contract into the following data structure:
         inputs: List[str]
         outputs: List[str]
         raw_text: str
+        file_of_origin: str <- name of file of origin
     }
 
 }

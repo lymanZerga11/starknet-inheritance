@@ -31,6 +31,7 @@ Parse a .cairo contract into the following data structure:
 """
 
 import re
+from itertools import tee
 
 
 def parse_cairo_contract(contract_path):
@@ -51,7 +52,11 @@ def parse_cairo_contract(contract_path):
                 },
                 "inherits": {
                     "compiled": re.compile("@inherits"),
-                    "parse_function": "parse_ending_block",
+                    "parse_function": "parse_inherit",
+                },
+                "imports": {
+                    "compiled": re.compile("\nfrom"),
+                    "parse_function": "parse_imports",
                 },
                 "storage": {
                     "compiled": re.compile("@storage_var"),
@@ -130,9 +135,73 @@ def parse_inherit(contract: str, starting_match: re.Match) -> list():
     return inherit_list
 
 
-def parse_block(occurance: str, contract: str, ending_word: str) -> list():
+def parse_imports(contract: str, starting_match: re.Match) -> list():
+    imports_list = list()
+
+    print(starting_match)
+    print(next(pairwise(starting_match)))
+
+    if len(starting_match) > 1:
+        for (occurance, next_occurance) in pairwise(starting_match):
+            i = parse_single_import(occurance, next_occurance, contract)
+            imports_list.append(i)
+
+    imports_list.append(parse_last_import(starting_match[-1], contract))
+
+    return imports_list
+
+
+def parse_single_import(occurance: dict, next_occurance: dict, contract: str) -> dict:
+    block = contract[occurance["start"] : next_occurance["start"]]
+    return import_parse(block)
+
+
+def parse_last_import(occurance: dict, contract: str) -> dict:
+    # determine if next block after last import starts with @ or func
+    at_symbol = re.compile("@")
+    func_symbol = re.compile("\nfunc")
+    const_symbol = re.compile("\nconst")
+
+    slice_to_start = contract[occurance["start"] :]
+
+    next_at = at_symbol.search(slice_to_start)
+    next_func = func_symbol.search(slice_to_start)
+    next_const = const_symbol.search(slice_to_start)
+
+    if not next_at:
+        next_at = -1
+    if not next_func:
+        next_func = -1
+    if not next_const:
+        next_const = -1
+
+    ending_index = min(next_at.start(), next_func.start(), next_const.start())
+
+    if ending_index == -1:
+        block = slice_to_start
+    else:
+        block = slice_to_start[:ending_index]
+
+    return import_parse(block)
+
+
+def import_parse(block: str) -> dict:
     word = re.compile("[\S]+")
-    block = get_block(occurance, contract, "end")
+    list_of_words = word.findall(block)
+
+    clean_list_of_words = [replace_import_chars(word) for word in list_of_words]
+
+    package_name = clean_list_of_words[1]
+    list_of_imports = (
+        [x for x in clean_list_of_words[3:]] if len(clean_list_of_words) > 3 else None
+    )
+    return dict({package_name: list_of_imports})
+
+
+def parse_block(occurance: dict, contract: str, ending_word: str) -> list():
+    word = re.compile("[\S]+")
+    block = get_block(occurance, contract, ending_word)
+    print(block)
     return word.findall(block)
 
 
@@ -148,7 +217,26 @@ def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
     end = re.compile(ending_str)
     string_starting_with_keyword = contract[occurance["start"] :]
     match = end.search(string_starting_with_keyword)
-    return string_starting_with_keyword[: match.end()]
+    if match:
+        return string_starting_with_keyword[: match.end()]
+    else:
+        return string_starting_with_keyword
+
+
+def replace_import_chars(word: str) -> str:
+    list_of_chars = [",", "{", "}", "(", ")"]
+
+    for char in list_of_chars:
+        word.replace(char, "")
+
+    return word
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 parse_cairo_contract("A.cairo")

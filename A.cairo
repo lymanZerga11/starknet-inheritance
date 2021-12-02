@@ -7,6 +7,9 @@ end
 %builtins pedersen
 
 from starkware.starknet.common.syscalls import get_caller_address, get_contract_address
+from test import b
+from other import other_one, and_one
+from the_other import {one_more}
 
 const test = 100
 

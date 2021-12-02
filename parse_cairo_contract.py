@@ -51,7 +51,7 @@ def parse_cairo_contract(contract_path):
                 },
                 "inherits": {
                     "compiled": re.compile("@inherits"),
-                    "parse_function": "parse_inherit",
+                    "parse_function": "parse_ending_block",
                 },
                 "storage": {
                     "compiled": re.compile("@storage_var"),
@@ -69,7 +69,6 @@ def parse_cairo_contract(contract_path):
                     "compiled": re.compile("\nfunc "),
                     "parse_function": "parse_func",
                 },
-                "end": {"compiled": re.compile("end"), "parse_function": "parse_end"},
             }
         )
 
@@ -78,6 +77,8 @@ def parse_cairo_contract(contract_path):
         dict_of_contract = create_dict_of_contract(
             contract_as_string, dict_of_keywords, dict_of_matches
         )
+
+        print(dict_of_contract)
 
 
 def create_dict_of_matches(contract: str, dict_of_keywords: dict()) -> dict():
@@ -111,19 +112,28 @@ def create_dict_of_contract(
 
 def parse_percent_header(contract: str, percent_match: re.Match) -> list():
     percent_list = list()
-    newline = re.compile("\n")
-    word = re.compile("[\S]+")
 
     for occurance in percent_match:
-        string_starting_with_percent = contract[occurance["start"] :]
-        match = newline.search(string_starting_with_percent)
-
-        percent_block = string_starting_with_percent[: match.start()]
-
-        list_of_words = word.findall(percent_block)
+        list_of_words = parse_block(occurance, contract, "\n")
         percent_list.extend(list_of_words[1:])
 
     return percent_list
+
+
+def parse_inherit(contract: str, starting_match: re.Match) -> list():
+    inherit_list = list()
+
+    for occurance in starting_match:
+        list_of_words = parse_block(occurance, contract, "end")
+        inherit_list.extend(list_of_words[1:-1])
+
+    return inherit_list
+
+
+def parse_block(occurance: str, contract: str, ending_word: str) -> list():
+    word = re.compile("[\S]+")
+    block = get_block(occurance, contract, "end")
+    return word.findall(block)
 
 
 def compile_list_of_strings(list_of_strings: list()) -> list():
@@ -132,6 +142,13 @@ def compile_list_of_strings(list_of_strings: list()) -> list():
         compiled_strings.append(re.compile(string))
 
     return compiled_strings
+
+
+def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
+    end = re.compile(ending_str)
+    string_starting_with_keyword = contract[occurance["start"] :]
+    match = end.search(string_starting_with_keyword)
+    return string_starting_with_keyword[: match.end()]
 
 
 parse_cairo_contract("A.cairo")

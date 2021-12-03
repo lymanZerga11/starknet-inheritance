@@ -19,6 +19,10 @@ Parse a .cairo contract into the following data structure:
         inputs: List[str]
         raw_text: str
     }
+    const: List[Dict{
+        inputs: List
+        raw_text: str
+    }]
     functions: List[Dict{
         name: str
         inputs: List[str]
@@ -82,7 +86,7 @@ def parse_cairo_contract(contract_path):
             contract_as_string, dict_of_keywords, dict_of_matches
         )
 
-        # print(dict_of_contract)
+        return dict_of_contract
 
 
 def create_dict_of_matches(contract: str, dict_of_keywords: dict()) -> dict():
@@ -108,8 +112,6 @@ def create_dict_of_contract(
             f'{dict_of_keywords[keyword]["parse_function"]}'
             + "(contract, dict_of_matches[keyword])"
         )
-
-        print(dict_of_contract)
 
     return dict_of_contract
 
@@ -212,15 +214,6 @@ def import_parse(block: str) -> dict:
 ###################
 # STORAGE PARSING
 ###################
-"""
-storage_vars: List[Dict{
-        name: str
-        inputs: List[str]
-        outputs: List[str]
-        raw_text: str
-        file_of_origin: str <- name of file of origin
-    }
-    """
 
 
 def parse_storage(contract: str, storage_match: re.Match) -> list():
@@ -230,6 +223,7 @@ def parse_storage(contract: str, storage_match: re.Match) -> list():
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         name = parse_name(list_of_words[2])
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        # TODO: add file of origin
 
         dict_of_storage = dict(
             {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
@@ -237,6 +231,92 @@ def parse_storage(contract: str, storage_match: re.Match) -> list():
         storage_list.append(dict_of_storage)
 
     return storage_list
+
+
+###################
+# CONSTRUCTOR PARSING
+###################
+
+
+def parse_constructor(contract: str, constructor_match: re.Match) -> list():
+
+    # will only ever be one but will be packaged in a list
+    for occurance in constructor_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+
+        # name should always be constructor
+        name = parse_name(list_of_words[2])
+
+        # should always have no outputs
+
+        print(list_of_words)
+        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        # TODO: add file of origin
+
+        constructor_dict = dict(
+            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+        )
+
+    return constructor_dict
+
+
+###################
+# CONST PARSING
+###################
+
+
+def parse_const(contract: str, const_match: re.Match) -> list():
+    const_list = list()
+
+    for occurance in const_match:
+        const_dict = dict()
+        list_of_words, raw_text = parse_block(occurance, contract, "\n")
+        const_dict["name"] = parse_name(list_of_words[1])
+        const_dict["raw_text"] = raw_text
+        const_list.append(const_dict)
+
+    return const_list
+
+
+###################
+# FUNC PARSING
+###################
+
+
+def parse_func(contract: str, func_match: re.Match) -> list():
+    func_list = list()
+
+    for occurance in func_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+        name = parse_name(list_of_words[2])
+        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        # TODO: add file of origin
+
+        dict_of_func = dict(
+            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+        )
+        func_list.append(dict_of_func)
+
+    return func_list
+
+
+###################
+# GENERAL PARSING UTILS
+###################
+
+
+def parse_block(occurance: dict, contract: str, ending_word: str) -> (list(), str):
+    word = re.compile("[\S]+")
+    block = get_block(occurance, contract, ending_word)
+    return word.findall(block), block
+
+
+def compile_list_of_strings(list_of_strings: list()) -> list():
+    compiled_strings = list()
+    for string in list_of_strings:
+        compiled_strings.append(re.compile(string))
+
+    return compiled_strings
 
 
 def parse_name(word: str) -> str:
@@ -252,13 +332,18 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
     parenth = re.compile("\(([^\)]+)\)")
     aarow = re.compile("->")
 
-    full_string = " ".join(list_of_words)
+    raw_full_string = " ".join(list_of_words)
+    index = find_colon_after_func_statement(raw_full_string)
+    full_string = raw_full_string[:index]
 
     ob = open_bracket.search(full_string)
     p = parenth.finditer(full_string)
     a = aarow.search(full_string)
 
     list_p = list(p)
+
+    if not list_p:
+        return None, None
 
     if len(list_p) > 1:
         p_start = list()
@@ -284,7 +369,7 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
         bracket_slice = full_string[b_start:b_end]
         list_of_implicits = parse_args(bracket_slice)
 
-    if len(list_p) > 1:
+    if len(list_p) > 1 and p_start[0] < a_start:
         parenth_slice = full_string[p_start[0] : p_finish[0]]
         list_of_args = parse_args(parenth_slice)
 
@@ -304,6 +389,35 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
     return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
 
 
+def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
+    end = re.compile(ending_str)
+    string_starting_with_keyword = contract[occurance["start"] :].lstrip("\n")
+    match = end.search(string_starting_with_keyword)
+
+    if match:
+        return string_starting_with_keyword[: match.end()]
+    else:
+        return string_starting_with_keyword
+
+
+def replace_import_chars(word: str) -> str:
+    list_of_chars = [",", "{", "}", "(", ")"]
+
+    for char in list_of_chars:
+        word = word.replace(char, "").strip(" ")
+
+    return word
+
+
+def find_colon_after_func_statement(raw_full_string: str) -> int:
+    # find poisition of colon after func name() -> ():
+    index = 0
+    for char in raw_full_string:
+        if char == ")" and raw_full_string[index + 1] == ":":
+            return index + 1
+        index = index + 1
+
+
 def parse_args(the_slice: str) -> list:
     new_list = list()
 
@@ -321,49 +435,8 @@ def parse_args(the_slice: str) -> list:
     return new_list
 
 
-###################
-# GENERAL PARSING UTILS
-###################
-
-
-def parse_block(occurance: dict, contract: str, ending_word: str) -> (list(), str):
-    word = re.compile("[\S]+")
-    block = get_block(occurance, contract, ending_word)
-    return word.findall(block), block
-
-
-def compile_list_of_strings(list_of_strings: list()) -> list():
-    compiled_strings = list()
-    for string in list_of_strings:
-        compiled_strings.append(re.compile(string))
-
-    return compiled_strings
-
-
-def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
-    end = re.compile(ending_str)
-    string_starting_with_keyword = contract[occurance["start"] :]
-    match = end.search(string_starting_with_keyword)
-    if match:
-        return string_starting_with_keyword[: match.end()]
-    else:
-        return string_starting_with_keyword
-
-
-def replace_import_chars(word: str) -> str:
-    list_of_chars = [",", "{", "}", "(", ")"]
-
-    for char in list_of_chars:
-        word = word.replace(char, "").strip(" ")
-
-    return word
-
-
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
-
-
-parse_cairo_contract("A.cairo")

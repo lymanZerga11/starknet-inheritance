@@ -24,4 +24,15 @@ def combine_parsed_child_and_parent(parsed_data_of_child, parsed_data_of_parent)
     logic to merge constructors
     data_structure.merge(new_data)
     return data_structure
-'''
+"""
+
+from parse_cairo_contract import parse_cairo_contract
+
+
+def recursive_inheritance(contract_path: str):
+    main_cairo_contract_dict = parse_cairo_contract(contract_path)
+
+    print(main_cairo_contract_dict)
+
+
+recursive_inheritance("A.cairo")

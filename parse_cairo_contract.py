@@ -97,7 +97,8 @@ def parse_cairo_contract(contract_path):
         dict_of_contract = create_dict_of_contract(
             contract_as_string, dict_of_keywords, dict_of_matches
         )
-
+        #Allows to distinguish between different artifacts
+        dict_of_contract["contract"] = contract_path
         return dict_of_contract
 
 

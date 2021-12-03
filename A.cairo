@@ -22,10 +22,14 @@ func test_map(test_input: felt) -> (res: felt):
 end
 
 @constructor
-func constructor{}():
+func constructor{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+    }():
     test_var.write(0)
     test_map.write(1,2)
-    ret
+    return ()
 end
 
 func test_function(number: felt) -> (number_add_1: felt):

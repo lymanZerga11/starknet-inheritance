@@ -28,7 +28,6 @@ def combine_parsed_child_and_parent(parsed_data_of_child, parsed_data_of_parent)
 
 from parse_cairo_contract import parse_cairo_contract
 
-
 def recursive_inheritance(child_data_structure: dict, parent_contract_path: str):
     # parse the parent contract into dict
     parent_contract_dict = parse_cairo_contract(parent_contract_path)
@@ -106,7 +105,6 @@ def merge_child_and_parent(
     return merged_data_structure
 
 
-child = dict()
-x = recursive_inheritance(child, "A.cairo")
-
-print(x)
+if __name__ == "__main__":
+    child = dict()
+    x = recursive_inheritance(child, "A.cairo")

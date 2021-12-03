@@ -13,3 +13,4 @@ TODO:
 - handle contract interfaces in parser and recursive merge
 - handle constructor in the merge
 - implement function that writes a starknet structure given the data structure
+- throw errors when conflicting names (functions or storage)

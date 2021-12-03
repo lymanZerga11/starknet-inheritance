@@ -427,7 +427,7 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
 
     # if list_p is empty then there are no non implicit inputs or outputs
     if not list_p:
-        return return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
+        return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
 
     # if there are more than one instance of parentheses we need to initialize lists
     if len(list_p) > 1:

@@ -23,6 +23,9 @@ def write(contract_dict : dict, output_name : str) -> None:
     #follow with external functions
     for external in contract_dict['external']:
         contract.append(f"{external['raw_text']}\n")
+    #follow with view functions
+    for external in contract_dict['view']:
+        contract.append(f"{external['raw_text']}\n")
     #follow with internal functions
     for internal in contract_dict['func']:
         contract.append(f"{internal['raw_text']}\n")

@@ -81,6 +81,10 @@ def parse_cairo_contract(contract_path):
                     "compiled": re.compile("@external"),
                     "parse_function": "parse_external",
                 },
+                "view": {
+                    "compiled": re.compile("@view"),
+                    "parse_function": "parse_view",
+                },
                 "const": {
                     "compiled": re.compile("\nconst "),
                     "parse_function": "parse_const",
@@ -295,6 +299,29 @@ def parse_external(
 
     return external_list
 
+###################
+# VIEW PARSING
+###################
+
+
+def parse_view(
+    current_dict: dict, contract: str, view_match: re.Match
+) -> list():
+    view_list = list()
+
+    for occurance in view_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+        name = parse_name(list_of_words[2])
+        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        # TODO: add file of origin
+
+        dict_of_storage = dict(
+            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+        )
+        view_list.append(dict_of_storage)
+
+    return view_list
+
 
 ###################
 # CONSTRUCTOR PARSING
@@ -352,8 +379,9 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
     for occurance in func_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         name = parse_name(list_of_words[1])
+        ext_and_int_funcs = [x.get("name") for x in current_dict["external"]] + [x.get("name") for x in current_dict["view"]]
         if not name in [x.get("name") for x in current_dict["storage"]]:
-            if not name in [x.get("name") for x in current_dict["external"]]:
+            if not name in ext_and_int_funcs:
                 if not name == "constructor":
                     inputs, outputs = parse_inputs_and_outputs(list_of_words)
                     # TODO: add file of origin
@@ -520,6 +548,3 @@ def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
-
-
-x = parse_cairo_contract("A.cairo")

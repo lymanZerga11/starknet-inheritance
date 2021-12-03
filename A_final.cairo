@@ -40,8 +40,15 @@ func external_test_function(boom: felt) -> (value: felt):
     return (value)
 end
 
-func test_function(number: felt) -> (number_add_1: felt):
+@view
+func view_test_function(number: felt) -> (number_add_1: felt):
     number_add_1 = number + 1
+    return (number_add_1)
+end
+
+func some_internal_function(number: felt) -> (number_add_1: felt):
+    let (val) = test_map.read(1)
+    number_add_1 = val + 1
     return (number_add_1)
 end
 

@@ -1,4 +1,6 @@
-BIGGEST TODOS
+# Cairo Inheritance Implemented with Python regex logic
+
+TODO:
 
 - handle structs in parser and recursive merge
 - test nested parentheses where tuples are declared in bools

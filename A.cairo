@@ -14,7 +14,7 @@ from the_other import {one_more}
 const test = 100
 
 @storage_var
-func test_var() -> (res: felt)
+func test_var{test: felt, other_test: b, das_final}() -> (res: felt)
 end
 
 @storage_var

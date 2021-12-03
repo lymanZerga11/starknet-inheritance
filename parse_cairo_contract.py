@@ -37,7 +37,6 @@ from itertools import tee
 def parse_cairo_contract(contract_path):
     with open(contract_path) as contract:
         contract_as_string = contract.read()
-        print(contract_as_string)
 
         # compile important keywords
         dict_of_keywords = dict(
@@ -83,7 +82,7 @@ def parse_cairo_contract(contract_path):
             contract_as_string, dict_of_keywords, dict_of_matches
         )
 
-        print(dict_of_contract)
+        # print(dict_of_contract)
 
 
 def create_dict_of_matches(contract: str, dict_of_keywords: dict()) -> dict():
@@ -115,31 +114,43 @@ def create_dict_of_contract(
     return dict_of_contract
 
 
+###################
+# PERCENT HEADER PARSING
+###################
+
+
 def parse_percent_header(contract: str, percent_match: re.Match) -> list():
     percent_list = list()
 
     for occurance in percent_match:
-        list_of_words = parse_block(occurance, contract, "\n")
+        list_of_words, _ = parse_block(occurance, contract, "\n")
         percent_list.extend(list_of_words[1:])
 
     return percent_list
+
+
+###################
+# INHERITANCE PARSING
+###################
 
 
 def parse_inherit(contract: str, starting_match: re.Match) -> list():
     inherit_list = list()
 
     for occurance in starting_match:
-        list_of_words = parse_block(occurance, contract, "end")
+        list_of_words, _ = parse_block(occurance, contract, "end")
         inherit_list.extend(list_of_words[1:-1])
 
     return inherit_list
 
 
+###################
+# IMPORT STATEMENT PARSING
+###################
+
+
 def parse_imports(contract: str, starting_match: re.Match) -> list():
     imports_list = list()
-
-    print(starting_match)
-    print(next(pairwise(starting_match)))
 
     if len(starting_match) > 1:
         for (occurance, next_occurance) in pairwise(starting_match):
@@ -198,11 +209,127 @@ def import_parse(block: str) -> dict:
     return dict({package_name: list_of_imports})
 
 
-def parse_block(occurance: dict, contract: str, ending_word: str) -> list():
+###################
+# STORAGE PARSING
+###################
+"""
+storage_vars: List[Dict{
+        name: str
+        inputs: List[str]
+        outputs: List[str]
+        raw_text: str
+        file_of_origin: str <- name of file of origin
+    }
+    """
+
+
+def parse_storage(contract: str, storage_match: re.Match) -> list():
+    storage_list = list()
+
+    for occurance in storage_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+        name = parse_name(list_of_words[2])
+        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+
+        dict_of_storage = dict(
+            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+        )
+        storage_list.append(dict_of_storage)
+
+    return storage_list
+
+
+def parse_name(word: str) -> str:
+    word = word.split("{")[0]
+    word = word.split("(")[0]
+    return word
+
+
+def parse_inputs_and_outputs(list_of_words: str) -> list:
+    list_of_inputs = list()
+
+    open_bracket = re.compile("{[^\)]+}")
+    parenth = re.compile("\(([^\)]+)\)")
+    aarow = re.compile("->")
+
+    full_string = " ".join(list_of_words)
+
+    ob = open_bracket.search(full_string)
+    p = parenth.finditer(full_string)
+    a = aarow.search(full_string)
+
+    list_p = list(p)
+
+    if len(list_p) > 1:
+        p_start = list()
+        p_finish = list()
+
+        for pr in list_p:
+            p_start.append(pr.start())
+            p_finish.append(pr.end())
+    else:
+        p_start = list_p[0].start()
+        p_finish = list_p[0].end()
+
+    a_start = a.start()
+
+    list_of_implicits = None
+    list_of_args = None
+    list_of_outputs = None
+
+    if ob:
+        b_start = ob.start()
+        b_end = ob.end()
+
+        bracket_slice = full_string[b_start:b_end]
+        list_of_implicits = parse_args(bracket_slice)
+
+    if len(list_p) > 1:
+        parenth_slice = full_string[p_start[0] : p_finish[0]]
+        list_of_args = parse_args(parenth_slice)
+
+        parenth = re.compile("\(([^\)]+)\)")
+
+        output_parenth_slice = full_string[p_start[1] : p_finish[1]]
+        list_of_outputs = parse_args(output_parenth_slice)
+
+    elif p_start < a_start:
+        parenth_slice = full_string[p_start:p_finish]
+        list_of_args = parse_args(parenth_slice)
+
+    else:
+        parenth_slice = full_string[p_start:p_finish]
+        list_of_outputs = parse_args(parenth_slice)
+
+    return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
+
+
+def parse_args(the_slice: str) -> list:
+    new_list = list()
+
+    the_list = the_slice.split(",")
+    for implicit_arg in the_list:
+        new_arg = replace_import_chars(implicit_arg)
+
+        if ":" in new_arg:
+            split_arg = new_arg.split(":")
+            new_list.append(dict({"name": split_arg[0], "type": split_arg[1]}))
+
+        else:
+            new_list.append(dict({"name": new_arg, "type": None}))
+
+    return new_list
+
+
+###################
+# GENERAL PARSING UTILS
+###################
+
+
+def parse_block(occurance: dict, contract: str, ending_word: str) -> (list(), str):
     word = re.compile("[\S]+")
     block = get_block(occurance, contract, ending_word)
-    print(block)
-    return word.findall(block)
+    return word.findall(block), block
 
 
 def compile_list_of_strings(list_of_strings: list()) -> list():
@@ -227,7 +354,7 @@ def replace_import_chars(word: str) -> str:
     list_of_chars = [",", "{", "}", "(", ")"]
 
     for char in list_of_chars:
-        word.replace(char, "")
+        word = word.replace(char, "").strip(" ")
 
     return word
 

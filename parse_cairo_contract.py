@@ -199,14 +199,17 @@ def parse_last_import(occurance: dict, contract: str) -> dict:
     next_func = func_symbol.search(slice_to_start)
     next_const = const_symbol.search(slice_to_start)
 
-    if not next_at:
-        next_at = -1
-    if not next_func:
-        next_func = -1
-    if not next_const:
-        next_const = -1
+    list_of_values = list()
+    list_of_values.append(next_at.start() if next_at else -1)
+    list_of_values.append(next_func.start() if next_func else -1)
+    list_of_values.append(next_const.start() if next_const else -1)
 
-    ending_index = min(next_at.start(), next_func.start(), next_const.start())
+    new_list = [x for x in list_of_values if x != -1]
+
+    if new_list:
+        ending_index = min(new_list)
+    else:
+        ending_index = -1
 
     if ending_index == -1:
         block = slice_to_start
@@ -493,5 +496,3 @@ def pairwise(iterable):
 
 
 x = parse_cairo_contract("A.cairo")
-
-print(x)

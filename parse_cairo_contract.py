@@ -110,7 +110,7 @@ def create_dict_of_contract(
     for keyword in dict_of_matches.keys():
         dict_of_contract[keyword] = eval(
             f'{dict_of_keywords[keyword]["parse_function"]}'
-            + "(contract, dict_of_matches[keyword])"
+            + "(dict_of_contract, contract, dict_of_matches[keyword])"
         )
 
     return dict_of_contract
@@ -121,7 +121,9 @@ def create_dict_of_contract(
 ###################
 
 
-def parse_percent_header(contract: str, percent_match: re.Match) -> list():
+def parse_percent_header(
+    current_dict: dict, contract: str, percent_match: re.Match
+) -> list():
     percent_list = list()
 
     for occurance in percent_match:
@@ -136,7 +138,9 @@ def parse_percent_header(contract: str, percent_match: re.Match) -> list():
 ###################
 
 
-def parse_inherit(contract: str, starting_match: re.Match) -> list():
+def parse_inherit(
+    current_dict: dict, contract: str, starting_match: re.Match
+) -> list():
     inherit_list = list()
 
     for occurance in starting_match:
@@ -151,7 +155,9 @@ def parse_inherit(contract: str, starting_match: re.Match) -> list():
 ###################
 
 
-def parse_imports(contract: str, starting_match: re.Match) -> list():
+def parse_imports(
+    current_dict: dict, contract: str, starting_match: re.Match
+) -> list():
     imports_list = list()
 
     if len(starting_match) > 1:
@@ -216,7 +222,7 @@ def import_parse(block: str) -> dict:
 ###################
 
 
-def parse_storage(contract: str, storage_match: re.Match) -> list():
+def parse_storage(current_dict: dict, contract: str, storage_match: re.Match) -> list():
     storage_list = list()
 
     for occurance in storage_match:
@@ -238,7 +244,9 @@ def parse_storage(contract: str, storage_match: re.Match) -> list():
 ###################
 
 
-def parse_constructor(contract: str, constructor_match: re.Match) -> list():
+def parse_constructor(
+    current_dict: dict, contract: str, constructor_match: re.Match
+) -> list():
 
     # will only ever be one but will be packaged in a list
     for occurance in constructor_match:
@@ -263,7 +271,7 @@ def parse_constructor(contract: str, constructor_match: re.Match) -> list():
 ###################
 
 
-def parse_const(contract: str, const_match: re.Match) -> list():
+def parse_const(current_dict: dict, contract: str, const_match: re.Match) -> list():
     const_list = list()
 
     for occurance in const_match:
@@ -281,19 +289,26 @@ def parse_const(contract: str, const_match: re.Match) -> list():
 ###################
 
 
-def parse_func(contract: str, func_match: re.Match) -> list():
+def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list():
     func_list = list()
 
     for occurance in func_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
-        name = parse_name(list_of_words[2])
-        inputs, outputs = parse_inputs_and_outputs(list_of_words)
-        # TODO: add file of origin
+        name = parse_name(list_of_words[1])
+        if not name in [x.get("name") for x in current_dict["storage"]]:
+            if not name == "constructor":
+                inputs, outputs = parse_inputs_and_outputs(list_of_words)
+                # TODO: add file of origin
 
-        dict_of_func = dict(
-            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
-        )
-        func_list.append(dict_of_func)
+                dict_of_func = dict(
+                    {
+                        "name": name,
+                        "inputs": inputs,
+                        "outputs": outputs,
+                        "raw_text": raw_text,
+                    }
+                )
+                func_list.append(dict_of_func)
 
     return func_list
 
@@ -438,3 +453,8 @@ def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+x = parse_cairo_contract("A.cairo")
+
+print(x)

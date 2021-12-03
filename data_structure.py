@@ -1,4 +1,4 @@
-big_dict = {
+cairo_contract_A_dict = {
     "lang": ["starknet"],
     "builtin": ["pedersen"],
     "inherits": ["B", "C"],

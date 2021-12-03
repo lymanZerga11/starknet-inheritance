@@ -93,6 +93,10 @@ def parse_cairo_contract(contract_path):
                     "compiled": re.compile("\nfunc "),
                     "parse_function": "parse_func",
                 },
+                "struct": {
+                    "compiled": re.compile("\nstruct "),
+                    "parse_function": "parse_struct",
+                },
             }
         )
 
@@ -330,7 +334,7 @@ def parse_view(
 
 def parse_constructor(
     current_dict: dict, contract: str, constructor_match: re.Match
-) -> list():
+) -> dict():
 
     # will only ever be one but will be packaged in a list
     for occurance in constructor_match:
@@ -397,6 +401,24 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
                     func_list.append(dict_of_func)
 
     return func_list
+
+
+###################
+# STRUCT PARSING
+###################
+
+
+def parse_struct(current_dict: dict, contract: str, struct_match: re.Match) -> list():
+    struct_list = list()
+
+    for occurance in struct_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+        dict_of_struct = dict(
+            {"raw_text": raw_text}
+        )
+        struct_list.append(dict_of_struct)
+
+    return struct_list
 
 
 ###################

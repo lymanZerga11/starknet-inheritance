@@ -8,6 +8,11 @@ from the_other import one_more
 from wombat import battime,womtime
 
 
+struct Test:
+    member a : felt
+    member b : felt 
+end
+
 @storage_var
 func test_var{test: felt, other_test: b, das_final}() -> (res: felt):
 end

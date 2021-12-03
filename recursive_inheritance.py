@@ -30,11 +30,15 @@ from parse_cairo_contract import parse_cairo_contract
 
 
 def recursive_inheritance(child_data_structure: dict, parent_contract_path: str):
+    # parse the parent contract into dict
     parent_contract_dict = parse_cairo_contract(parent_contract_path)
+
+    # merge parent with child
     cairo_contract_dict = merge_child_and_parent(
         child_data_structure, parent_contract_dict
     )
 
+    # if parent inherits then do depth first recursion for the chain of inheritance
     if parent_contract_dict["inherits"]:
         for parent in parent_contract_dict["inherits"]:
             cairo_contract_dict = recursive_inheritance(

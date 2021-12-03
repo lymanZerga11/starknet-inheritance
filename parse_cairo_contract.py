@@ -119,6 +119,8 @@ def create_dict_of_contract(
     # final data structure
     dict_of_contract = dict()
 
+    # we call each parse function by name to parse different blocks of the contract
+    # all parsing is done from the absolute contract
     for keyword in dict_of_matches.keys():
         dict_of_contract[keyword] = eval(
             f'{dict_of_keywords[keyword]["parse_function"]}'
@@ -138,6 +140,7 @@ def parse_percent_header(
 ) -> list():
     percent_list = list()
 
+    # each time we have a % appearing in the given match object we parse the block ending in \n
     for occurance in percent_match:
         list_of_words, _ = parse_block(occurance, contract, "\n")
         percent_list.extend(list_of_words[1:])
@@ -172,6 +175,7 @@ def parse_imports(
 ) -> list():
     imports_list = list()
 
+    # check that there are more than one import statement so we can use the start of the next import as the stop for the previous
     if len(starting_match) > 1:
         for (occurance, next_occurance) in pairwise(starting_match):
             i = parse_single_import(occurance, next_occurance, contract)
@@ -184,28 +188,35 @@ def parse_imports(
 
 def parse_single_import(occurance: dict, next_occurance: dict, contract: str) -> dict:
     block = contract[occurance["start"] : next_occurance["start"]]
+
+    # parse the import block
     return import_parse(block)
 
 
 def parse_last_import(occurance: dict, contract: str) -> dict:
-    # determine if next block after last import starts with @ or func
+    # determine if next block after last import starts with @ or func or const
     at_symbol = re.compile("@")
     func_symbol = re.compile("\nfunc")
     const_symbol = re.compile("\nconst")
 
+    # cut contract to start at the beginning of the occurance
     slice_to_start = contract[occurance["start"] :]
 
+    # search for position of @ symbol, func, or const
     next_at = at_symbol.search(slice_to_start)
     next_func = func_symbol.search(slice_to_start)
     next_const = const_symbol.search(slice_to_start)
 
+    # create list of start indices, assign negative one if one doesnt exist
     list_of_values = list()
     list_of_values.append(next_at.start() if next_at else -1)
     list_of_values.append(next_func.start() if next_func else -1)
     list_of_values.append(next_const.start() if next_const else -1)
 
+    # drop the -1 values
     new_list = [x for x in list_of_values if x != -1]
 
+    # if there are values left select the minimum
     if new_list:
         ending_index = min(new_list)
     else:
@@ -214,8 +225,10 @@ def parse_last_import(occurance: dict, contract: str) -> dict:
     if ending_index == -1:
         block = slice_to_start
     else:
+        # end the slice at the beginning of the next symbol
         block = slice_to_start[:ending_index]
 
+    # parse the import block
     return import_parse(block)
 
 
@@ -223,9 +236,12 @@ def import_parse(block: str) -> dict:
     word = re.compile("[\S]+")
     list_of_words = word.findall(block)
 
+    # strip extra characters
     clean_list_of_words = [replace_import_chars(word) for word in list_of_words]
 
+    # package name is first word after from
     package_name = clean_list_of_words[1]
+    # import names are 3rd word after from and on
     list_of_imports = (
         [x for x in clean_list_of_words[3:]] if len(clean_list_of_words) > 3 else None
     )
@@ -242,6 +258,7 @@ def parse_storage(current_dict: dict, contract: str, storage_match: re.Match) ->
 
     for occurance in storage_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
+        # name is the third word, also strip extra chars from name
         name = parse_name(list_of_words[2])
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
         # TODO: add file of origin
@@ -379,12 +396,17 @@ def parse_name(word: str) -> str:
 
 
 def parse_inputs_and_outputs(list_of_words: str) -> list:
-    list_of_inputs = list()
+    list_of_implicits = None
+    list_of_args = None
+    list_of_outputs = None
 
+    # compile the regex patters we are searching for
     open_bracket = re.compile("{[^\)]+}")
     parenth = re.compile("\(([^\)]+)\)")
     aarow = re.compile("->")
 
+    # join the words around spaced and then find the index of the colon just after the function statement
+    # slice the string to just the function statement
     raw_full_string = " ".join(list_of_words)
     index = find_colon_after_func_statement(raw_full_string)
     full_string = raw_full_string[:index]
@@ -395,9 +417,19 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
 
     list_p = list(p)
 
-    if not list_p:
-        return None, None
+    # if there are {} then parse implicit arguments
+    if ob:
+        b_start = ob.start()
+        b_end = ob.end()
 
+        bracket_slice = full_string[b_start:b_end]
+        list_of_implicits = parse_args(bracket_slice)
+
+    # if list_p is empty then there are no non implicit inputs or outputs
+    if not list_p:
+        return return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
+
+    # if there are more than one instance of parentheses we need to initialize lists
     if len(list_p) > 1:
         p_start = list()
         p_finish = list()
@@ -411,17 +443,9 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
 
     a_start = a.start()
 
-    list_of_implicits = None
-    list_of_args = None
-    list_of_outputs = None
-
-    if ob:
-        b_start = ob.start()
-        b_end = ob.end()
-
-        bracket_slice = full_string[b_start:b_end]
-        list_of_implicits = parse_args(bracket_slice)
-
+    # if there are more than on parentheses and the first set starts before the arrows 
+    # then parse a list of non implicit arguments and then parse outputs
+    #NOTE: could be a problem with nested parentheses of tuples here
     if len(list_p) > 1 and p_start[0] < a_start:
         parenth_slice = full_string[p_start[0] : p_finish[0]]
         list_of_args = parse_args(parenth_slice)
@@ -431,17 +455,19 @@ def parse_inputs_and_outputs(list_of_words: str) -> list:
         output_parenth_slice = full_string[p_start[1] : p_finish[1]]
         list_of_outputs = parse_args(output_parenth_slice)
 
+    #if only one set of parentheses and they are before the arrow then they are args
     elif p_start < a_start:
         parenth_slice = full_string[p_start:p_finish]
         list_of_args = parse_args(parenth_slice)
 
+    #if only one set of parentheses and they are after the arrow they are outputs
     else:
         parenth_slice = full_string[p_start:p_finish]
         list_of_outputs = parse_args(parenth_slice)
 
     return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
 
-
+#return block of text to be parsed
 def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
     end = re.compile(ending_str)
     string_starting_with_keyword = contract[occurance["start"] :].lstrip("\n")
@@ -470,7 +496,7 @@ def find_colon_after_func_statement(raw_full_string: str) -> int:
             return index + 1
         index = index + 1
 
-
+# turn arguments or outputs into data structure List({'name': name, 'type': type})
 def parse_args(the_slice: str) -> list:
     new_list = list()
 
@@ -487,7 +513,7 @@ def parse_args(the_slice: str) -> list:
 
     return new_list
 
-
+#itertools pairwise recipe used for import statement parsing
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)

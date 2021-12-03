@@ -1,5 +1,11 @@
 # Cairo Inheritance Implemented with Python regex logic
 
+run the test on A.cairo by running
+
+~~~[python]
+python recursive_inheritance.py
+~~~
+
 TODO:
 
 - handle structs in parser and recursive merge

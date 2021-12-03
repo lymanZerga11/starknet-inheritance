@@ -23,6 +23,13 @@ Parse a .cairo contract into the following data structure:
         inputs: List
         raw_text: str
     }]
+    external: List[Dict{
+        name: str
+        inputs: List[str]
+        outputs: List[str]
+        raw_text: str
+        file_of_origin: str <- name of file of origin
+    }
     functions: List[Dict{
         name: str
         inputs: List[str]
@@ -43,6 +50,7 @@ def parse_cairo_contract(contract_path):
         contract_as_string = contract.read()
 
         # compile important keywords
+        # important that func is last
         dict_of_keywords = dict(
             {
                 "lang": {
@@ -68,6 +76,10 @@ def parse_cairo_contract(contract_path):
                 "constructor": {
                     "compiled": re.compile("@constructor"),
                     "parse_function": "parse_constructor",
+                },
+                "external": {
+                    "compiled": re.compile("@external"),
+                    "parse_function": "parse_external",
                 },
                 "const": {
                     "compiled": re.compile("\nconst "),
@@ -240,6 +252,30 @@ def parse_storage(current_dict: dict, contract: str, storage_match: re.Match) ->
 
 
 ###################
+# EXTERNAL PARSING
+###################
+
+
+def parse_external(
+    current_dict: dict, contract: str, external_match: re.Match
+) -> list():
+    external_list = list()
+
+    for occurance in external_match:
+        list_of_words, raw_text = parse_block(occurance, contract, "end")
+        name = parse_name(list_of_words[2])
+        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        # TODO: add file of origin
+
+        dict_of_storage = dict(
+            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+        )
+        external_list.append(dict_of_storage)
+
+    return external_list
+
+
+###################
 # CONSTRUCTOR PARSING
 ###################
 
@@ -296,19 +332,20 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         name = parse_name(list_of_words[1])
         if not name in [x.get("name") for x in current_dict["storage"]]:
-            if not name == "constructor":
-                inputs, outputs = parse_inputs_and_outputs(list_of_words)
-                # TODO: add file of origin
+            if not name in [x.get("name") for x in current_dict["external"]]:
+                if not name == "constructor":
+                    inputs, outputs = parse_inputs_and_outputs(list_of_words)
+                    # TODO: add file of origin
 
-                dict_of_func = dict(
-                    {
-                        "name": name,
-                        "inputs": inputs,
-                        "outputs": outputs,
-                        "raw_text": raw_text,
-                    }
-                )
-                func_list.append(dict_of_func)
+                    dict_of_func = dict(
+                        {
+                            "name": name,
+                            "inputs": inputs,
+                            "outputs": outputs,
+                            "raw_text": raw_text,
+                        }
+                    )
+                    func_list.append(dict_of_func)
 
     return func_list
 

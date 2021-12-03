@@ -32,3 +32,9 @@ func test_function(number: felt) -> (number_add_1: felt):
     number_add_1 = number + 1
     return (number_add_1)
 end
+
+@external
+func external_test_function(boom: felt) -> (value: felt):
+    value = boom
+    return (value)
+end

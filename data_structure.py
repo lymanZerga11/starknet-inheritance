@@ -43,6 +43,14 @@ cairo_contract_A_dict = {
         "outputs": None,
         "raw_text": "@constructor\nfunc constructor{}():\n    test_var.write(0)\n    test_map.write(1,2)\n    ret\nend",
     },
+    "external": [
+        {
+            "name": "external_test_function",
+            "inputs": {"implicits": None, "args": [{"name": "boom", "type": " felt"}]},
+            "outputs": [{"name": "value", "type": " felt"}],
+            "raw_text": "@external\nfunc external_test_function(boom: felt) -> (value: felt):\n    value = boom\n    return (value)\nend",
+        }
+    ],
     "const": [{"name": "test", "raw_text": "const test = 100\n"}],
     "func": [
         {

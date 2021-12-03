@@ -29,10 +29,20 @@ def combine_parsed_child_and_parent(parsed_data_of_child, parsed_data_of_parent)
 from parse_cairo_contract import parse_cairo_contract
 
 
-def recursive_inheritance(contract_path: str):
-    main_cairo_contract_dict = parse_cairo_contract(contract_path)
+def recursive_inheritance(child_data_structure: dict, parent_contract_path: str):
+    cairo_contract_dict = parse_cairo_contract(parent_contract_path)
+    cairo_contract_dict = merge_child_and_parent(
+        child_data_structure, cairo_contract_dict
+    )
 
-    print(main_cairo_contract_dict)
+    if cairo_contract_dict["inherits"]:
+        for parent in cairo_contract_dict["inherits"]:
+            cairo_contract_dict = recursive_inheritance(
+                cairo_contract_dict, (parent + ".cairo")
+            )
+
+    return cairo_contract_dict
 
 
-recursive_inheritance("A.cairo")
+child = dict()
+_ = recursive_inheritance(child, "A.cairo")

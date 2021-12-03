@@ -248,8 +248,6 @@ def parse_constructor(contract: str, constructor_match: re.Match) -> list():
         name = parse_name(list_of_words[2])
 
         # should always have no outputs
-
-        print(list_of_words)
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
         # TODO: add file of origin
 

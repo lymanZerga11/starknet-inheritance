@@ -13,7 +13,7 @@ def write(contract_dict : dict, output_name : str) -> None:
         contract.append(f"from {module} import {','.join(import_[module])}")
     contract.append("\n") #separate imports from rest of code
     #follow with structs
-    for struct in contract_dict['struct']:
+    for struct in contract_dict['structs']:
         contract.append(f"{struct['raw_text']}\n")
     #follow with storage
     for storage in contract_dict['storage']:

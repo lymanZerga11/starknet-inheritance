@@ -93,9 +93,9 @@ def parse_cairo_contract(contract_path):
                     "compiled": re.compile("\nfunc "),
                     "parse_function": "parse_func",
                 },
-                "struct": {
+                "structs": {
                     "compiled": re.compile("\nstruct "),
-                    "parse_function": "parse_struct",
+                    "parse_function": "parse_structs",
                 },
             }
         )
@@ -408,13 +408,20 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
 ###################
 
 
-def parse_struct(current_dict: dict, contract: str, struct_match: re.Match) -> list():
+def parse_structs(current_dict: dict, contract: str, struct_match: re.Match) -> list():
     struct_list = list()
 
     for occurance in struct_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
+        name = list_of_words[1].replace(":","")
+        members_to_parse = filter(lambda x: x != ":" and x != "member", list_of_words[2:len(list_of_words)-1])
+
+        members = [] #{name, type}
+        for member in [*zip(members_to_parse, members_to_parse)]:
+            members.append({"name":member[0], "type":member[1]})
+
         dict_of_struct = dict(
-            {"raw_text": raw_text}
+            {"name":name, "members":members, "raw_text": raw_text}
         )
         struct_list.append(dict_of_struct)
 

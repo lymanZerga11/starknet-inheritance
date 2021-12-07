@@ -187,7 +187,6 @@ def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -
         list_words, _ = parse_block(occurance, contract, "\n")
         #first "word" is the module
         dict_of_module = {list_words[0]: [repl_imp_chars(imp) for imp in list_words[2:]]}
-        print (dict_of_module)
         imports_list.append(dict_of_module)
 
     return imports_list

@@ -1,31 +1,37 @@
 %lang starknet
-%builtins pedersen hashbuiltIn
+%builtins pedersen ecdsa
 
-from starkware.starknet.common.syscalls import get_caller_address,get_contract_address
-from test import b,c,d
-from other import other_one,and_one
-from the_other import one_more
-from wombat import battime,womtime
+from starkware.starknet.common.syscalls import get_contract_address,get_caller_address
+from starkware.cairo.common.uint256 import Uint256,uint256_add,uint256_sub,uint256_le,uint256_lt,uint256_check
 
 
-struct Test:
+struct TestA:
+    member a : felt
+    member b : felt 
+end
+
+struct StructC:
     member a : felt
     member b : felt 
 end
 
 @storage_var
-func test_var{test: felt, other_test: b, das_final}() -> (res: felt):
+func tuple_map{a: felt, b: felt}() -> (res: felt):
 end
 
 @storage_var
-func test_map(test_input: felt) -> (res: felt):
+func some_map(a: felt) -> (res: felt):
 end
 
 @storage_var
-func store(x: felt) -> (y: felt):
+func map_of_B(key: felt) -> (res: felt):
 end
 
-const test = 100
+@storage_var
+func map_of_C(key: felt) -> (res: felt):
+end
+
+const some_constant = 100
 
 
 @constructor
@@ -34,8 +40,8 @@ func constructor{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
     }():
-    test_var.write(0)
-    test_map.write(1,2)
+    (val : felt,) = _private_of_B(2)
+    some_map(0, val)
     return ()
 end
 
@@ -51,13 +57,24 @@ func view_test_function(number: felt) -> (number_add_1: felt):
     return (number_add_1)
 end
 
+@view
+func _view_of_C(n: felt) -> (f: felt):
+    f = n * 5
+    return f
+end
+
 func some_internal_function(number: felt) -> (number_add_1: felt):
     let (val) = test_map.read(1)
     number_add_1 = val + 1
     return (number_add_1)
 end
 
-func _das_private(n: felt) -> (f: felt):
+func _private_of_B(n: felt) -> (f: felt):
+    f = n * 2
+    return f
+end
+
+func _private_of_C(n: felt) -> (f: felt):
     f = n * 2
     return f
 end

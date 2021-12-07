@@ -64,11 +64,11 @@ def parse_cairo_contract(contract_name):
                 "parse_function": "parse_percent_header",
             },
             "inherits": {
-                "compiled": re.compile("@inherits"),
-                "parse_function": "parse_inherit",
+                "compiled": re.compile(r"%inherits"),
+                "parse_function": "parse_percent_header",
             },
             "imports": {
-                "compiled": re.compile("\nfrom"),
+                "compiled": re.compile(r"(?<=from)(.*)(?=\n)"),
                 "parse_function": "parse_imports",
             },
             "storage": {
@@ -180,82 +180,17 @@ def parse_inherit(
 ###################
 
 
-def parse_imports(
-    current_dict: dict, contract: str, starting_match: re.Match
-) -> list():
+def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -> list():
     imports_list = list()
 
-    # check that there are more than one import statement so we can use the start of the next import as the stop for the previous
-    if len(starting_match) > 1:
-        for (occurance, next_occurance) in pairwise(starting_match):
-            i = parse_single_import(occurance, next_occurance, contract)
-            imports_list.append(i)
-
-    imports_list.append(parse_last_import(starting_match[-1], contract))
+    for occurance in starting_match:
+        list_words, _ = parse_block(occurance, contract, "\n")
+        #first "word" is the module
+        dict_of_module = {list_words[0]: [repl_imp_chars(imp) for imp in list_words[2:]]}
+        print (dict_of_module)
+        imports_list.append(dict_of_module)
 
     return imports_list
-
-
-def parse_single_import(occurance: dict, next_occurance: dict, contract: str) -> dict:
-    block = contract[occurance["start"] : next_occurance["start"]]
-
-    # parse the import block
-    return import_parse(block)
-
-
-def parse_last_import(occurance: dict, contract: str) -> dict:
-    # determine if next block after last import starts with @ or func or const
-    at_symbol = re.compile("@")
-    func_symbol = re.compile("\nfunc")
-    const_symbol = re.compile("\nconst")
-
-    # cut contract to start at the beginning of the occurance
-    slice_to_start = contract[occurance["start"] :]
-
-    # search for position of @ symbol, func, or const
-    next_at = at_symbol.search(slice_to_start)
-    next_func = func_symbol.search(slice_to_start)
-    next_const = const_symbol.search(slice_to_start)
-
-    # create list of start indices, assign negative one if one doesnt exist
-    list_of_values = list()
-    list_of_values.append(next_at.start() if next_at else -1)
-    list_of_values.append(next_func.start() if next_func else -1)
-    list_of_values.append(next_const.start() if next_const else -1)
-
-    # drop the -1 values
-    new_list = [x for x in list_of_values if x != -1]
-
-    # if there are values left select the minimum
-    if new_list:
-        ending_index = min(new_list)
-    else:
-        ending_index = -1
-
-    if ending_index == -1:
-        block = slice_to_start
-    else:
-        # end the slice at the beginning of the next symbol
-        block = slice_to_start[:ending_index]
-
-    # parse the import block
-    return import_parse(block)
-
-
-def import_parse(block: str) -> dict:
-    word = re.compile("[\S]+")
-    list_of_words = word.findall(block)
-
-    # strip extra characters
-    clean_list_of_words = [replace_import_chars(word) for word in list_of_words]
-
-    # package name is first word after from
-    package_name = clean_list_of_words[1]
-    # import names are 3rd word after from and on
-    list_of_imports = (
-        [x for x in clean_list_of_words[3:]] if len(clean_list_of_words) > 3 else None
-    )
-    return dict({package_name: list_of_imports})
 
 
 ###################
@@ -538,13 +473,9 @@ def get_block(occurance: dict(), contract: str, ending_str: str) -> str:
         return string_starting_with_keyword
 
 
-def replace_import_chars(word: str) -> str:
-    list_of_chars = [",", "{", "}", "(", ")"]
-
-    for char in list_of_chars:
-        word = word.replace(char, "").strip(" ")
-
-    return word
+def repl_imp_chars(word: str) -> str:
+    to_remove = (",", "{", "}", "(", ")")
+    return word.translate({ord(ch):'' for ch in to_remove})
 
 
 def find_colon_after_func_statement(raw_full_string: str) -> int:
@@ -561,7 +492,7 @@ def parse_args(the_slice: str) -> list:
 
     the_list = the_slice.split(",")
     for implicit_arg in the_list:
-        new_arg = replace_import_chars(implicit_arg)
+        new_arg = repl_imp_chars(implicit_arg)
 
         if ":" in new_arg:
             split_arg = new_arg.split(":")

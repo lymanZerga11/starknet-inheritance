@@ -1,29 +1,22 @@
-@inherits
-B
-C
-end
-
+%inherits B
 %lang starknet
 %builtins pedersen
 
-from starkware.starknet.common.syscalls import get_caller_address, get_contract_address
-from test import b
-from other import other_one, and_one
-from the_other import {one_more}
+from starkware.starknet.common.syscalls import get_contract_address
 
-const test = 100
+const some_constant = 100
 
-struct Test:
+struct TestA:
     member a : felt
     member b : felt 
 end
 
 @storage_var
-func test_var{test: felt, other_test: b, das_final}() -> (res: felt):
+func tuple_map{a: felt, b: felt}() -> (res: felt):
 end
 
 @storage_var
-func test_map(test_input: felt) -> (res: felt):
+func some_map(a: felt) -> (res: felt):
 end
 
 @constructor
@@ -32,8 +25,8 @@ func constructor{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
     }():
-    test_var.write(0)
-    test_map.write(1,2)
+    (val : felt,) = _private_of_B(2)
+    some_map(0, val)
     return ()
 end
 

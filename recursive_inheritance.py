@@ -100,6 +100,16 @@ def merge_child_and_parent(
         if not name in [x.get("name") for x in merged_data_structure["const"]]:
             merged_data_structure["const"].append(const)
 
+    for struct in parent_data_structure["structs"]:
+        name = struct["name"]
+        if not name in [x.get("name") for x in merged_data_structure["structs"]]:
+            merged_data_structure["structs"].append(struct)
+
+    for view in parent_data_structure["view"]:
+        name = view["name"]
+        if not name in [x.get("name") for x in merged_data_structure["view"]]:
+            merged_data_structure["view"].append(view)
+
     return merged_data_structure
 
 

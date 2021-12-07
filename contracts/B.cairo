@@ -1,21 +1,25 @@
+%inherits C
 %lang starknet
-%builtins pedersen hashbuiltIn
+%builtins pedersen ecdsa
 
-from starkware.starknet.common.syscalls import get_caller_address, get_contract_address
-from test import b, c
-from other import other_one, and_one
-from wombat import battime
+from starkware.starknet.common.syscalls import get_caller_address
+from starkware.cairo.common.uint256 import (Uint256, uint256_add, uint256_sub, uint256_le, uint256_lt, uint256_check)
 
 @storage_var
-func test_map(test_input: felt) -> (res: felt, other_res: felt):
+func map_of_B(key: felt) -> (res: felt):
 end
 
 @constructor
-func constructor{}():
-    ret
+func constructor{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+    }():
+    map_of_B.write(key=0, value=100)
+    return ()
 end
 
-func _das_private(n: felt) -> (f: felt):
+func _private_of_B(n: felt) -> (f: felt):
     f = n * 2
     return f
 end

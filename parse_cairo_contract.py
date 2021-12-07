@@ -43,72 +43,74 @@ Parse a .cairo contract into the following data structure:
 
 import re
 from itertools import tee
+from writer import write_artifact
+from commons import CONTRACTS_DIRECTORY
 
-
-def parse_cairo_contract(contract_path):
+def parse_cairo_contract(contract_name):
+    contract_path = f"{CONTRACTS_DIRECTORY}/{contract_name}.cairo"
     with open(contract_path) as contract:
         contract_as_string = contract.read()
 
-        # compile important keywords
-        # important that func is last
-        dict_of_keywords = dict(
-            {
-                "lang": {
-                    "compiled": re.compile(r"%lang"),
-                    "parse_function": "parse_percent_header",
-                },
-                "builtin": {
-                    "compiled": re.compile(r"%builtins"),
-                    "parse_function": "parse_percent_header",
-                },
-                "inherits": {
-                    "compiled": re.compile("@inherits"),
-                    "parse_function": "parse_inherit",
-                },
-                "imports": {
-                    "compiled": re.compile("\nfrom"),
-                    "parse_function": "parse_imports",
-                },
-                "storage": {
-                    "compiled": re.compile("@storage_var"),
-                    "parse_function": "parse_storage",
-                },
-                "constructor": {
-                    "compiled": re.compile("@constructor"),
-                    "parse_function": "parse_constructor",
-                },
-                "external": {
-                    "compiled": re.compile("@external"),
-                    "parse_function": "parse_external",
-                },
-                "view": {
-                    "compiled": re.compile("@view"),
-                    "parse_function": "parse_view",
-                },
-                "const": {
-                    "compiled": re.compile("\nconst "),
-                    "parse_function": "parse_const",
-                },
-                "func": {
-                    "compiled": re.compile("\nfunc "),
-                    "parse_function": "parse_func",
-                },
-                "structs": {
-                    "compiled": re.compile("\nstruct "),
-                    "parse_function": "parse_structs",
-                },
-            }
-        )
+    # compile important keywords
+    # important that func is last
+    dict_of_keywords = dict(
+        {
+            "lang": {
+                "compiled": re.compile(r"%lang"),
+                "parse_function": "parse_percent_header",
+            },
+            "builtin": {
+                "compiled": re.compile(r"%builtins"),
+                "parse_function": "parse_percent_header",
+            },
+            "inherits": {
+                "compiled": re.compile("@inherits"),
+                "parse_function": "parse_inherit",
+            },
+            "imports": {
+                "compiled": re.compile("\nfrom"),
+                "parse_function": "parse_imports",
+            },
+            "storage": {
+                "compiled": re.compile("@storage_var"),
+                "parse_function": "parse_storage",
+            },
+            "constructor": {
+                "compiled": re.compile("@constructor"),
+                "parse_function": "parse_constructor",
+            },
+            "external": {
+                "compiled": re.compile("@external"),
+                "parse_function": "parse_external",
+            },
+            "view": {
+                "compiled": re.compile("@view"),
+                "parse_function": "parse_view",
+            },
+            "const": {
+                "compiled": re.compile("\nconst "),
+                "parse_function": "parse_const",
+            },
+            "func": {
+                "compiled": re.compile("\nfunc "),
+                "parse_function": "parse_func",
+            },
+            "structs": {
+                "compiled": re.compile("\nstruct "),
+                "parse_function": "parse_structs",
+            },
+        }
+    )
 
-        dict_of_matches = create_dict_of_matches(contract_as_string, dict_of_keywords)
+    dict_of_matches = create_dict_of_matches(contract_as_string, dict_of_keywords)
 
-        dict_of_contract = create_dict_of_contract(
-            contract_as_string, dict_of_keywords, dict_of_matches
-        )
-        #Allows to distinguish between different artifacts
-        dict_of_contract["contract"] = contract_path
-        return dict_of_contract
-
+    dict_of_contract = create_dict_of_contract(
+        contract_as_string, dict_of_keywords, dict_of_matches
+    )
+    #Allows to distinguish between different artifacts
+    dict_of_contract["contract"] = contract_path
+    write_artifact(dict_of_contract, contract_name)
+    return dict_of_contract
 
 def create_dict_of_matches(contract: str, dict_of_keywords: dict()) -> dict():
     dict_of_matches = dict()
@@ -170,7 +172,6 @@ def parse_inherit(
     for occurance in starting_match:
         list_of_words, _ = parse_block(occurance, contract, "end")
         inherit_list.extend(list_of_words[1:-1])
-
     return inherit_list
 
 

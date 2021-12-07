@@ -1,6 +1,15 @@
-def write(contract_dict : dict, output_name : str) -> None:
+from json import dump
+from commons import CONTRACTS_DIRECTORY, ARTIFACTS_DIRECTORY
+from pathlib import Path
+
+def write_artifact(contract_dict : dict, contract_name : str):
+    Path(f"{ARTIFACTS_DIRECTORY}").mkdir(parents=True, exist_ok=True)
+    with open(f"{ARTIFACTS_DIRECTORY}/{contract_name}.json", 'w') as file:
+        dump(contract_dict, file)
+
+def write_contract(contract_dict : dict, contract_name : str) -> None:
     """
-    Write the contract to a file.
+    Write the final contract to a file.
     """
     contract = []
     #start with lang
@@ -33,5 +42,5 @@ def write(contract_dict : dict, output_name : str) -> None:
     for internal in contract_dict['func']:
         contract.append(f"{internal['raw_text']}\n")
     #write final file
-    with open(output_name, 'w') as f:
+    with open(f"{CONTRACTS_DIRECTORY}/{contract_name}.cairo", 'w') as f:
         f.writelines("\n".join(contract))

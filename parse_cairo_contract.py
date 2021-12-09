@@ -196,10 +196,11 @@ def parse_at_decorator(current_dict: dict, contract: str, match: re.Match) -> li
         # name is the third word, also strip extra chars from name
         name = parse_name(list_of_words[2])
         implicits = get_implicits(raw_text)
-        inputs, outputs = parse_inputs_and_outputs(list_of_words)
+        args = get_args(raw_text)
+        outputs = get_outputs(raw_text)
         # TODO: add file of origin
         data_dict = dict(
-            {"name": name, "inputs": {"implicits":implicits}, "outputs": outputs, "raw_text": raw_text}
+            {"name": name, "inputs": {"implicits":implicits, "args":args}, "outputs": outputs, "raw_text": raw_text}
         )
         lst.append(data_dict)
 
@@ -331,77 +332,42 @@ def get_implicits(raw_text : str) -> list:
         pass
     return implicits
 
+def get_args(raw_text : str) -> list:
+    """
+    Retrieve the arguments of a function.
+    """
+    reg = re.compile("(?<=}\()(.|\n)*?(?=\):|\)\s-)")
+    args = []
+    try:
+        x = next(reg.finditer(raw_text))
+        raw_args = raw_text[x.start():x.end()].split(",")
+        cleaned_args = list(map(lambda x : x.replace("\n", "").replace(" ", ""), raw_args))
+        for arg in cleaned_args:
+            name, type = arg.split(":") if len(arg.split(":")) > 1 else [arg, None]
+            args.append({"name":name, "type":type})
+    except StopIteration:
+        pass
+    return args
 
-def parse_inputs_and_outputs(list_of_words: str) -> list:
-    list_of_implicits = None
-    list_of_args = None
-    list_of_outputs = None
-    # compile the regex patters we are searching for
-    open_bracket = re.compile("{[^\)]+}")
-    parenth = re.compile("\(([^\)]+)\)")
-    aarow = re.compile("->")
-
-    # join the words around spaced and then find the index of the colon just after the function statement
-    # slice the string to just the function statement
-    raw_full_string = " ".join(list_of_words)
-    index = find_colon_after_func_statement(raw_full_string)
-    full_string = raw_full_string[:index]
-
-    ob = open_bracket.search(full_string)
-    p = parenth.finditer(full_string)
-    a = aarow.search(full_string)
-
-    list_p = list(p)
-
-    # if there are {} then parse implicit arguments
-    if ob:
-        b_start = ob.start()
-        b_end = ob.end()
-
-        bracket_slice = full_string[b_start:b_end]
-        list_of_implicits = parse_args(bracket_slice)
-
-    # if list_p is empty then there are no non implicit inputs or outputs
-    if not list_p:
-        return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
-
-    # if there are more than one instance of parentheses we need to initialize lists
-    if len(list_p) > 1:
-        p_start = list()
-        p_finish = list()
-
-        for pr in list_p:
-            p_start.append(pr.start())
-            p_finish.append(pr.end())
-    else:
-        p_start = list_p[0].start()
-        p_finish = list_p[0].end()
-
-    a_start = a.start()
-
-    # if there are more than on parentheses and the first set starts before the arrows 
-    # then parse a list of non implicit arguments and then parse outputs
-    #NOTE: could be a problem with nested parentheses of tuples here
-    if len(list_p) > 1 and p_start[0] < a_start:
-        parenth_slice = full_string[p_start[0] : p_finish[0]]
-        list_of_args = parse_args(parenth_slice)
-
-        parenth = re.compile("\(([^\)]+)\)")
-
-        output_parenth_slice = full_string[p_start[1] : p_finish[1]]
-        list_of_outputs = parse_args(output_parenth_slice)
-
-    #if only one set of parentheses and they are before the arrow then they are args
-    elif p_start < a_start:
-        parenth_slice = full_string[p_start:p_finish]
-        list_of_args = parse_args(parenth_slice)
-
-    #if only one set of parentheses and they are after the arrow they are outputs
-    else:
-        parenth_slice = full_string[p_start:p_finish]
-        list_of_outputs = parse_args(parenth_slice)
-
-    return dict({"implicits": list_of_implicits, "args": list_of_args}), list_of_outputs
+def get_outputs(raw_text : str) -> list:
+    """
+    Retrieves the outputs of a function.
+    """
+    reg = re.compile("(?<=}\()(.|\n)*?(?=\):)")
+    outputs = []
+    try:
+        x = next(reg.finditer(raw_text))
+        raw_outputs = raw_text[x.start():x.end()].split("->")
+        if len(raw_outputs) == 1: # no outputs
+            return outputs
+        raw_outputs = raw_outputs[1].replace("(", "")
+        cleaned_outputs = list(map(lambda x : x.replace("\n", "").replace(" ", ""), raw_outputs))
+        for output in cleaned_outputs:
+            name, type = output.split(":") if len(output.split(":")) > 1 else [output, None]
+            outputs.append({"name":name, "type":type})
+    except StopIteration:
+        pass
+    return outputs
 
 #return block of text to be parsed
 def get_block(occurance: dict(), contract: str, ending_str: str) -> str:

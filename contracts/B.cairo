@@ -24,5 +24,5 @@ func _private_of_B{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr}(n: felt) -> (f: felt):
     let f = n * 2
-    return f
+    return (f)
 end

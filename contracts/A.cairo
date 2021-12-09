@@ -25,7 +25,7 @@ func constructor{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
     }():
-    (val : felt,) = _private_of_B(2)
+    let (val,) = _private_of_B(2)
     some_map.write(0, val)
     return ()
 end
@@ -45,7 +45,7 @@ func some_internal_function{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
     }(number: felt) -> (number_add_1: felt):
-    let (val) = test_map.read(1)
+    let (val) = some_map.read(1)
     let number_add_1 = val + 1
     return (number_add_1)
 end

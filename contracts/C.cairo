@@ -1,34 +1,21 @@
 %lang starknet
-%builtins pedersen ecdsa
+%builtins pedersen range_check
 
-from starkware.starknet.common.syscalls import get_caller_address
-
-struct StructC:
-    member a : felt
-    member b : felt 
-end
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 @storage_var
-func map_of_C(key: felt) -> (res: felt):
-end
-
-@constructor
-func constructor{
-    syscall_ptr : felt*, 
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-    }():
-    map_of_C.write(key=0, value=200)
-    return ()
+func balance(user_id : felt) -> (res : felt):
 end
 
 @view
-func _view_of_C(n: felt) -> (f: felt):
-    f = n * 5
-    return f
+func get_balance{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(user_id : felt) -> (res : felt):
+    let (current_balance) = balance.read(user_id=user_id)
+    return (res=current_balance)
 end
 
-func _private_of_C(n: felt) -> (f: felt):
-    f = n * 2
-    return f
+@external
+func increase_balance{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(user_id : felt, amount : felt):
+    let (current_balance,) = balance.read(user_id)
+    balance.write(user_id=user_id, value=current_balance + amount)
+    return ()
 end

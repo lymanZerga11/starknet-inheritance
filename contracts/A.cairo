@@ -1,6 +1,6 @@
 %inherits B
 %lang starknet
-%builtins pedersen
+%builtins pedersen range_check
 
 from starkware.starknet.common.syscalls import get_contract_address
 
@@ -26,24 +26,36 @@ func constructor{
     range_check_ptr
     }():
     (val : felt,) = _private_of_B(2)
-    some_map(0, val)
+    some_map.write(0, val)
     return ()
 end
 
 @view
-func view_test_function(number: felt) -> (number_add_1: felt):
-    number_add_1 = number + 1
+func view_test_function{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+    }(number: felt) -> (number_add_1: felt):
+    let number_add_1 = number + 1
     return (number_add_1)
 end
 
-func some_internal_function(number: felt) -> (number_add_1: felt):
+func some_internal_function{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+    }(number: felt) -> (number_add_1: felt):
     let (val) = test_map.read(1)
-    number_add_1 = val + 1
+    let number_add_1 = val + 1
     return (number_add_1)
 end
 
 @external
-func external_test_function(boom: felt) -> (value: felt):
-    value = boom
+func external_test_function{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+    }(boom: felt) -> (value: felt):
+    let value = boom
     return (value)
 end

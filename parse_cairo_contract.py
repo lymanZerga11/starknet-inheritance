@@ -43,6 +43,7 @@ Parse a .cairo contract into the following data structure:
 
 import re
 from itertools import tee
+from typing import Tuple
 from writer import write_artifact
 from commons import CONTRACTS_DIRECTORY
 
@@ -73,7 +74,7 @@ def parse_cairo_contract(contract_name):
             },
             "storage": {
                 "compiled": re.compile("@storage_var"),
-                "parse_function": "parse_storage",
+                "parse_function": "parse_at_decorator",
             },
             "constructor": {
                 "compiled": re.compile("@constructor"),
@@ -81,11 +82,11 @@ def parse_cairo_contract(contract_name):
             },
             "external": {
                 "compiled": re.compile("@external"),
-                "parse_function": "parse_external",
+                "parse_function": "parse_at_decorator",
             },
             "view": {
                 "compiled": re.compile("@view"),
-                "parse_function": "parse_view",
+                "parse_function": "parse_at_decorator",
             },
             "const": {
                 "compiled": re.compile("\nconst "),
@@ -96,7 +97,7 @@ def parse_cairo_contract(contract_name):
                 "parse_function": "parse_func",
             },
             "structs": {
-                "compiled": re.compile("\nstruct "),
+                "compiled": re.compile(r"(?=\bstruct\b)(.|\n)+?(?<=end)"),
                 "parse_function": "parse_structs",
             },
         }
@@ -162,8 +163,6 @@ def parse_percent_header(
 ###################
 # INHERITANCE PARSING
 ###################
-
-
 def parse_inherit(
     current_dict: dict, contract: str, starting_match: re.Match
 ) -> list():
@@ -178,8 +177,6 @@ def parse_inherit(
 ###################
 # IMPORT STATEMENT PARSING
 ###################
-
-
 def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -> list():
     imports_list = list()
 
@@ -193,100 +190,42 @@ def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -
 
 
 ###################
-# STORAGE PARSING
+# STORAGE+EXTERNAL+VIEW PARSING
 ###################
-
-
-def parse_storage(current_dict: dict, contract: str, storage_match: re.Match) -> list():
-    storage_list = list()
-
-    for occurance in storage_match:
+def parse_at_decorator(current_dict: dict, contract: str, match: re.Match) -> list():
+    """
+    Parses the pieces of code with the "@" decorator prefix
+    """
+    lst = list()
+    for occurance in match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         # name is the third word, also strip extra chars from name
         name = parse_name(list_of_words[2])
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
         # TODO: add file of origin
-
-        dict_of_storage = dict(
+        data_dict = dict(
             {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
         )
-        storage_list.append(dict_of_storage)
+        lst.append(data_dict)
 
-    return storage_list
-
-
-###################
-# EXTERNAL PARSING
-###################
-
-
-def parse_external(
-    current_dict: dict, contract: str, external_match: re.Match
-) -> list():
-    external_list = list()
-
-    for occurance in external_match:
-        list_of_words, raw_text = parse_block(occurance, contract, "end")
-        name = parse_name(list_of_words[2])
-        inputs, outputs = parse_inputs_and_outputs(list_of_words)
-        # TODO: add file of origin
-
-        dict_of_storage = dict(
-            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
-        )
-        external_list.append(dict_of_storage)
-
-    return external_list
-
-###################
-# VIEW PARSING
-###################
-
-
-def parse_view(
-    current_dict: dict, contract: str, view_match: re.Match
-) -> list():
-    view_list = list()
-
-    for occurance in view_match:
-        list_of_words, raw_text = parse_block(occurance, contract, "end")
-        name = parse_name(list_of_words[2])
-        inputs, outputs = parse_inputs_and_outputs(list_of_words)
-        # TODO: add file of origin
-
-        dict_of_storage = dict(
-            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
-        )
-        view_list.append(dict_of_storage)
-
-    return view_list
+    return lst
 
 
 ###################
 # CONSTRUCTOR PARSING
 ###################
-
-
-def parse_constructor(
-    current_dict: dict, contract: str, constructor_match: re.Match
-) -> dict():
-
+def parse_constructor(current_dict: dict, contract: str, constructor_match: re.Match) -> dict():
     # will only ever be one but will be packaged in a list
     for occurance in constructor_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
-
         # name should always be constructor
         name = parse_name(list_of_words[2])
-
         # should always have no outputs
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
         # TODO: add file of origin
+        return {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
 
-        constructor_dict = dict(
-            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
-        )
-
-    return constructor_dict
+    return None
 
 
 ###################
@@ -345,7 +284,6 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
 
 def parse_structs(current_dict: dict, contract: str, struct_match: re.Match) -> list():
     struct_list = list()
-
     for occurance in struct_match:
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         name = list_of_words[1].replace(":","")
@@ -368,7 +306,7 @@ def parse_structs(current_dict: dict, contract: str, struct_match: re.Match) -> 
 ###################
 
 
-def parse_block(occurance: dict, contract: str, ending_word: str) -> (list(), str):
+def parse_block(occurance: dict, contract: str, ending_word: str) -> Tuple[list, str]:
     word = re.compile("[\S]+")
     block = get_block(occurance, contract, ending_word)
     return word.findall(block), block

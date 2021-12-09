@@ -1,6 +1,6 @@
 %inherits C
 %lang starknet
-%builtins pedersen ecdsa
+%builtins pedersen range_check ecdsa
 
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.uint256 import (Uint256, uint256_add, uint256_sub, uint256_le, uint256_lt, uint256_check)
@@ -19,7 +19,10 @@ func constructor{
     return ()
 end
 
-func _private_of_B(n: felt) -> (f: felt):
-    f = n * 2
+func _private_of_B{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr}(n: felt) -> (f: felt):
+    let f = n * 2
     return f
 end

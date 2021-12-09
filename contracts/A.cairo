@@ -12,7 +12,7 @@ struct TestA:
 end
 
 @storage_var
-func tuple_map{a: felt, b: felt}() -> (res: felt):
+func tuple_map(a: felt, b: felt) -> (res: felt):
 end
 
 @storage_var

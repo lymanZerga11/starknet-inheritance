@@ -145,11 +145,7 @@ def create_dict_of_contract(
 ###################
 # PERCENT HEADER PARSING
 ###################
-
-
-def parse_percent_header(
-    current_dict: dict, contract: str, percent_match: re.Match
-) -> list():
+def parse_percent_header(current_dict: dict, contract: str, percent_match: re.Match) -> list:
     percent_list = list()
 
     # each time we have a % appearing in the given match object we parse the block ending in \n
@@ -163,9 +159,7 @@ def parse_percent_header(
 ###################
 # INHERITANCE PARSING
 ###################
-def parse_inherit(
-    current_dict: dict, contract: str, starting_match: re.Match
-) -> list():
+def parse_inherit(current_dict: dict, contract: str, starting_match: re.Match) -> list:
     inherit_list = list()
 
     for occurance in starting_match:
@@ -177,7 +171,7 @@ def parse_inherit(
 ###################
 # IMPORT STATEMENT PARSING
 ###################
-def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -> list():
+def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -> list:
     imports_list = list()
 
     for occurance in starting_match:
@@ -192,7 +186,7 @@ def parse_imports(current_dict: dict, contract: str, starting_match: re.Match) -
 ###################
 # STORAGE+EXTERNAL+VIEW PARSING
 ###################
-def parse_at_decorator(current_dict: dict, contract: str, match: re.Match) -> list():
+def parse_at_decorator(current_dict: dict, contract: str, match: re.Match) -> list:
     """
     Parses the pieces of code with the "@" decorator prefix
     """
@@ -201,10 +195,11 @@ def parse_at_decorator(current_dict: dict, contract: str, match: re.Match) -> li
         list_of_words, raw_text = parse_block(occurance, contract, "end")
         # name is the third word, also strip extra chars from name
         name = parse_name(list_of_words[2])
+        implicits = get_implicits(raw_text)
         inputs, outputs = parse_inputs_and_outputs(list_of_words)
         # TODO: add file of origin
         data_dict = dict(
-            {"name": name, "inputs": inputs, "outputs": outputs, "raw_text": raw_text}
+            {"name": name, "inputs": {"implicits":implicits}, "outputs": outputs, "raw_text": raw_text}
         )
         lst.append(data_dict)
 
@@ -231,8 +226,6 @@ def parse_constructor(current_dict: dict, contract: str, constructor_match: re.M
 ###################
 # CONST PARSING
 ###################
-
-
 def parse_const(current_dict: dict, contract: str, const_match: re.Match) -> list():
     const_list = list()
 
@@ -249,8 +242,6 @@ def parse_const(current_dict: dict, contract: str, const_match: re.Match) -> lis
 ###################
 # FUNC PARSING
 ###################
-
-
 def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list():
     func_list = list()
 
@@ -280,8 +271,6 @@ def parse_func(current_dict: dict, contract: str, func_match: re.Match) -> list(
 ###################
 # STRUCT PARSING
 ###################
-
-
 def parse_structs(current_dict: dict, contract: str, struct_match: re.Match) -> list():
     struct_list = list()
     for occurance in struct_match:
@@ -325,12 +314,28 @@ def parse_name(word: str) -> str:
     word = word.split("(")[0]
     return word
 
+def get_implicits(raw_text : str) -> list:
+    """
+    Retrieve the implicits of a function.
+    """
+    reg = re.compile("(?<={)(.|\n)*?(?=})")
+    implicits = []
+    try:
+        x = next(reg.finditer(raw_text))
+        raw_implicits = raw_text[x.start():x.end()].split(",")
+        cleaned_implicits = list(map(lambda x : x.replace("\n", "").replace(" ", ""), raw_implicits))
+        for implicit in cleaned_implicits:
+            name, type = implicit.split(":") if len(implicit.split(":")) > 1 else [implicit, None]
+            implicits.append({"name":name, "type":type})
+    except StopIteration:
+        pass
+    return implicits
+
 
 def parse_inputs_and_outputs(list_of_words: str) -> list:
     list_of_implicits = None
     list_of_args = None
     list_of_outputs = None
-
     # compile the regex patters we are searching for
     open_bracket = re.compile("{[^\)]+}")
     parenth = re.compile("\(([^\)]+)\)")
